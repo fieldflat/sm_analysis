@@ -118,7 +118,7 @@ def step2(sm, w):
       for m in result:
         index = m.span()[1]
         before_sm = sm
-        sm = sm[:index-(w-1-i)] + '0'*(w-1-i) + sm[index:]
+        sm = sm[:index-(w-1-i)] + 'z'*(w-1-i) + sm[index:]
         if before_sm != sm:
           flag = True
   return sm
@@ -129,13 +129,13 @@ def extension_step3(sm, w):
   while flag:
     flag = False
     for i in range(0, w-1):
-      my_regex = "[^1]{" + str(w-1-i) + "}10{" + str(i) + "}[z1]"
+      my_regex = "[^1]{" + str(w-1-i) + "}1z{" + str(i) + "}[k1]"
       result = re.finditer(my_regex, sm)
       for m in result:
         print(m)
         index = m.span()[0]
         before_sm = sm
-        sm = sm[:index] + 'z' + sm[index+1:]
+        sm = sm[:index] + 'k' + sm[index+1:]
         if before_sm != sm:
           flag = True
   return sm
@@ -150,7 +150,7 @@ def step3(sm, w):
     for m in result:
       index = m.span()[0]
       before_sm = sm
-      sm = sm[:index] + 'z' + sm[index+1:]
+      sm = sm[:index] + 'k' + sm[index+1:]
       if before_sm != sm:
         flag = True
   return sm
@@ -174,48 +174,8 @@ def step4(sm, w):
 
   return sm
 
-if __name__ == '__main__':
-  window_length = 4
-  e = 2**16+1
-
-  # p, q, d, dp, dqの計算
-  p, q, d, dp, dq, n = rsa_setting(32, 32, e)
-  p_list = change_decimal_to_binary(p)
-  q_list = change_decimal_to_binary(q)
-  d_list = change_decimal_to_binary(d)
-  dp_list = change_decimal_to_binary(dp)
-  dq_list = change_decimal_to_binary(dq)
-  
-  # k, kp, kqの計算
-  if ((e*d-1)%((p-1)*(q-1)) == 0):
-    k = (e*d-1) // ((p-1)*(q-1))
-  else:
-    print('k is error')
-
-  if ((e*dp-1) % (p-1) == 0):
-    kp = (e*dp-1) // (p-1)
-  else:
-    print('kp is error')
-
-  if ((e*dq-1) % (q-1) == 0):
-    kq = (e*dq-1) // (q-1)
-  else:
-    print('kq is error')
-
-  # dp, dqのSM時系列導出
-  dp_sm = change_d_to_sm_series(dp_list, window_length)
-  dq_sm = change_d_to_sm_series(dq_list, window_length)
-
-  dp_sm = "s1sssssss1sss1ssss1sss1ss1ssss11sssss1ssssss1s1sssss1ss1sssssss1"
-  dq_sm = "s1sssssss1sss1ssss1sss1ss1ssss11sssss1ssssss1s1sssss1ss1sssssss1"
-  dp_sm = "sssmssssssmsssmsssssmsmssssssmssssssm"
-  dq_sm = "sssmssssssmsssmsssssmsmssssssmssssssm"
-
-  print(dp_sm)
-  print(dq_sm)
-
-  before_dp_sm = dp_sm
-  before_dq_sm = dq_sm
+# iterate_decode_sm(dp_sm, dq_sm)
+def iterate_decode_sm(dp_sm, dq_sm):
 
   # step1: sm → 1
   print('*** step1 ***')
@@ -224,7 +184,7 @@ if __name__ == '__main__':
   print(dp_sm)
   print(dq_sm)
 
-  # step2: 
+  # step2:
   print('*** step2 ***')
   dp_sm = step2(dp_sm, window_length)
   dq_sm = step2(dq_sm, window_length)
@@ -252,41 +212,71 @@ if __name__ == '__main__':
   print(dp_sm)
   print(dq_sm)
 
+  return dp_sm, dq_sm
+
+# dp_sm, dq_smを復元
+def decode_sm(dp_sm, dq_sm):
+
+  before_dp_sm = dp_sm
+  before_dq_sm = dq_sm
+  dp_sm, dq_sm = iterate_decode_sm(dp_sm, dq_sm)
+
   while before_dp_sm != dp_sm or before_dq_sm != dq_sm:
     before_dp_sm = dp_sm
     before_dq_sm = dq_sm
+    dp_sm, dq_sm = iterate_decode_sm(dp_sm, dq_sm)
 
-    # step1: sm → 1
-    print('*** step1 ***')
-    dp_sm = step1(dp_sm)
-    dq_sm = step1(dq_sm)
-    print(dp_sm)
-    print(dq_sm)
+  dp_sm = dp_sm.replace('k', '1')
+  dq_sm = dq_sm.replace('k', '1')
+  dp_sm = dp_sm.replace('z', '0')
+  dq_sm = dq_sm.replace('z', '0')
+  dp_sm = dp_sm.replace('s', 'x')
+  dq_sm = dq_sm.replace('s', 'x')
 
-    # step2:
-    print('*** step2 ***')
-    dp_sm = step2(dp_sm, window_length)
-    dq_sm = step2(dq_sm, window_length)
-    print(dp_sm)
-    print(dq_sm)
+  return dp_sm, dq_sm
 
-    # extension step2:
-    print('*** extension step2 ***')
-    dp_sm = extension_step3(dp_sm, window_length)
-    dq_sm = extension_step3(dq_sm, window_length)
-    print(dp_sm)
-    print(dq_sm)
+if __name__ == '__main__':
+  window_length = 4
+  e = 2**16+1
+  l = 1024
 
-    # step3:
-    print('*** step3 ***')
-    dp_sm = step3(dp_sm, window_length)
-    dq_sm = step3(dq_sm, window_length)
-    print(dp_sm)
-    print(dq_sm)
+  # p, q, d, dp, dqの計算
+  p, q, d, dp, dq, n = rsa_setting(l, l, e)
+  p_list = change_decimal_to_binary(p)
+  q_list = change_decimal_to_binary(q)
+  d_list = change_decimal_to_binary(d)
+  dp_list = change_decimal_to_binary(dp)
+  dq_list = change_decimal_to_binary(dq)
+  
+  # k, kp, kqの計算
+  if ((e*d-1)%((p-1)*(q-1)) == 0):
+    k = (e*d-1) // ((p-1)*(q-1))
+  else:
+    print('k is error')
 
-    # step4:
-    print('*** step4 ***')
-    dp_sm = step4(dp_sm, window_length)
-    dq_sm = step4(dq_sm, window_length)
-    print(dp_sm)
-    print(dq_sm)
+  if ((e*dp-1) % (p-1) == 0):
+    kp = (e*dp-1) // (p-1)
+  else:
+    print('kp is error')
+
+  if ((e*dq-1) % (q-1) == 0):
+    kq = (e*dq-1) // (q-1)
+  else:
+    print('kq is error')
+
+  # dp, dqのSM時系列導出
+  dp_sm = change_d_to_sm_series(dp_list, window_length)
+  dq_sm = change_d_to_sm_series(dq_list, window_length)
+
+  # dp_sm = "s1sssssss1sss1ssss1sss1ss1ssss11sssss1ssssss1s1sssss1ss1sssssss1"
+  # dq_sm = "s1sssssss1sss1ssss1sss1ss1ssss11sssss1ssssss1s1sssss1ss1sssssss1"
+  # dp_sm = "sssmssssssmsssmsssssmsmssssssmssssssm"
+  # dq_sm = "sssmssssssmsssmsssssmsmssssssmssssssm"
+
+  dp_sm, dq_sm = decode_sm(dp_sm, dq_sm)
+
+  print('=== 復号結果 ===')
+  print('dp_sm: ')
+  print(dp_sm)
+  print('\ndq_sm: ')
+  print(dq_sm)

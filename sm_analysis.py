@@ -132,7 +132,6 @@ def extension_step3(sm, w):
       my_regex = "[^1]{" + str(w-1-i) + "}1z{" + str(i) + "}[k1]"
       result = re.finditer(my_regex, sm)
       for m in result:
-        print(m)
         index = m.span()[0]
         before_sm = sm
         sm = sm[:index] + 'k' + sm[index+1:]
@@ -235,6 +234,25 @@ def decode_sm(dp_sm, dq_sm):
 
   return dp_sm, dq_sm
 
+# check dp and dq
+def check_dp_and_dq(collect_dp_list, dp_list, collect_dq_list, dq_list):
+  err = ""
+  for i in range(len(collect_dp_list)):
+    if dp_list[i] != "x" and collect_dp_list[i] != int(dp_list[i]):
+      print(collect_dp_list[i],  dp_list[i])
+      err += "dpが不一致です！\n"
+  
+  for i in range(len(collect_dq_list)):
+    if dq_list[i] != "x" and collect_dq_list[i] != int(dq_list[i]):
+      print(collect_dq_list[i],  dq_list[i])
+      err += "dqが不一致です！\n"
+  
+  if err == "":
+    err = "異常なし"
+
+  return err
+
+
 if __name__ == '__main__':
   window_length = 4
   e = 2**16+1
@@ -276,7 +294,14 @@ if __name__ == '__main__':
   dp_sm, dq_sm = decode_sm(dp_sm, dq_sm)
 
   print('=== 復号結果 ===')
-  print('dp_sm: ')
+  print('dp: ')
+  print(bin(dp)[2:])
   print(dp_sm)
-  print('\ndq_sm: ')
+  print('\ndq: ')
+  print(bin(dq)[2:])
   print(dq_sm)
+
+  # エラーチェック
+  print("=== エラー結果 ===")
+  print(check_dp_and_dq(dp_list, dp_sm, dq_list, dq_sm))
+
